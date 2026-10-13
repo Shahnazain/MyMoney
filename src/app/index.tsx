@@ -1,5 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+
 import { useEffect, useState } from "react";
+
 import {
   Alert,
   KeyboardAvoidingView,
@@ -15,56 +17,88 @@ import {
 
 type Category = {
   name: string;
+
   icon: string;
 };
 
 type Transaction = {
   id: number;
+
   type: "income" | "expense";
+
   amount: number;
+
   category?: string;
+
   note: string;
+
   date: string;
 };
 
 const defaultCategories: Category[] = [
   { name: "Food", icon: "🍔" },
+
   { name: "Transport", icon: "🚌" },
+
   { name: "Makeup", icon: "💄" },
+
   { name: "Clothes", icon: "👗" },
+
   { name: "Skincare", icon: "🧴" },
+
   { name: "Shopping", icon: "🛍️" },
+
   { name: "Entertainment", icon: "🎬" },
+
   { name: "Education", icon: "📚" },
+
   { name: "Bills", icon: "🏠" },
+
   { name: "Health", icon: "💊" },
+
   { name: "Travel", icon: "✈️" },
+
   { name: "Other", icon: "📦" },
 ];
 
 export default function HomeScreen() {
   const [balance, setBalance] = useState(0);
+
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+
   const [categories, setCategories] = useState<Category[]>(defaultCategories);
 
   const [expenseModalVisible, setExpenseModalVisible] = useState(false);
+
   const [addMoneyModalVisible, setAddMoneyModalVisible] = useState(false);
+  const [historyModalVisible, setHistoryModalVisible] = useState(false);
+  const [selectedHistoryDate, setSelectedHistoryDate] = useState<string | null>(
+    null,
+  );
+  const [categoryModalVisible, setCategoryModalVisible] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState("");
 
   const [amount, setAmount] = useState("");
+
   const [note, setNote] = useState("");
+
   const [selectedCategory, setSelectedCategory] = useState("Food");
 
   const [editingTransaction, setEditingTransaction] =
     useState<Transaction | null>(null);
 
   // =========================
+
   // LOAD DATA
+
   // =========================
 
   const loadData = async () => {
     try {
       const savedBalance = await AsyncStorage.getItem("balance");
+
       const savedTransactions = await AsyncStorage.getItem("transactions");
+
       const savedCategories = await AsyncStorage.getItem("categories");
 
       if (savedBalance) {
@@ -88,7 +122,9 @@ export default function HomeScreen() {
   }, []);
 
   // =========================
+
   // ADD / EDIT MONEY
+
   // =========================
 
   const addMoney = async () => {
@@ -96,10 +132,12 @@ export default function HomeScreen() {
 
     if (!value || value <= 0) {
       Alert.alert("Invalid amount", "Please enter a valid amount.");
+
       return;
     }
 
     let newBalance = balance;
+
     let updatedTransactions = [...transactions];
 
     if (editingTransaction) {
@@ -111,7 +149,9 @@ export default function HomeScreen() {
         transaction.id === editingTransaction.id
           ? {
               ...transaction,
+
               amount: value,
+
               note: note.trim(),
             }
           : transaction,
@@ -121,9 +161,13 @@ export default function HomeScreen() {
 
       const transaction: Transaction = {
         id: Date.now(),
+
         type: "income",
+
         amount: value,
+
         note: note.trim(),
+
         date: new Date().toISOString(),
       };
 
@@ -135,15 +179,20 @@ export default function HomeScreen() {
 
       await AsyncStorage.setItem(
         "transactions",
+
         JSON.stringify(updatedTransactions),
       );
 
       setBalance(newBalance);
+
       setTransactions(updatedTransactions);
 
       setAmount("");
+
       setNote("");
+
       setEditingTransaction(null);
+
       setAddMoneyModalVisible(false);
 
       Alert.alert(
@@ -155,7 +204,9 @@ export default function HomeScreen() {
   };
 
   // =========================
+
   // ADD / EDIT EXPENSE
+
   // =========================
 
   const addExpense = async () => {
@@ -163,19 +214,24 @@ export default function HomeScreen() {
 
     if (!value || value <= 0) {
       Alert.alert("Invalid amount", "Please enter a valid amount.");
+
       return;
     }
 
     // Normal new expense
+
     if (!editingTransaction && value > balance) {
       Alert.alert(
         "Not enough money",
+
         "This expense is greater than your current balance.",
       );
+
       return;
     }
 
     // Editing an existing expense
+
     if (
       editingTransaction &&
       editingTransaction.type === "expense" &&
@@ -183,12 +239,15 @@ export default function HomeScreen() {
     ) {
       Alert.alert(
         "Not enough money",
+
         "This expense is greater than your available balance.",
       );
+
       return;
     }
 
     let newBalance = balance;
+
     let updatedTransactions = [...transactions];
 
     if (editingTransaction) {
@@ -198,7 +257,9 @@ export default function HomeScreen() {
         newBalance = balance + oldAmount - value;
       } else {
         // This should not normally happen because income opens
+
         // the Add Money modal, but this keeps the logic safe.
+
         newBalance = balance - oldAmount - value;
       }
 
@@ -206,8 +267,11 @@ export default function HomeScreen() {
         transaction.id === editingTransaction.id
           ? {
               ...transaction,
+
               amount: value,
+
               category: selectedCategory,
+
               note: note.trim(),
             }
           : transaction,
@@ -217,10 +281,15 @@ export default function HomeScreen() {
 
       const transaction: Transaction = {
         id: Date.now(),
+
         type: "expense",
+
         amount: value,
+
         category: selectedCategory,
+
         note: note.trim(),
+
         date: new Date().toISOString(),
       };
 
@@ -232,16 +301,22 @@ export default function HomeScreen() {
 
       await AsyncStorage.setItem(
         "transactions",
+
         JSON.stringify(updatedTransactions),
       );
 
       setBalance(newBalance);
+
       setTransactions(updatedTransactions);
 
       setAmount("");
+
       setNote("");
+
       setSelectedCategory("Food");
+
       setEditingTransaction(null);
+
       setExpenseModalVisible(false);
 
       Alert.alert(editingTransaction ? "Expense updated" : "Expense added");
@@ -251,108 +326,96 @@ export default function HomeScreen() {
   };
 
   // =========================
-  // ADD CATEGORY
+
+  // ADD CATEGORY (works on web and native)
   // =========================
-
   const addCategory = () => {
-    Alert.prompt(
-      "Add Category",
-      "Enter your new category name",
-      [
-        {
-          text: "Cancel",
-          style: "cancel",
-        },
-        {
-          text: "Add",
-          onPress: async (categoryName: string | undefined) => {
-            const name = categoryName?.trim();
+    setNewCategoryName("");
+    setCategoryModalVisible(true);
+  };
 
-            if (!name) {
-              return;
-            }
+  const showMessage = (message: string) => {
+    if (Platform.OS === "web") window.alert(message);
+    else Alert.alert("MyMoney", message);
+  };
 
-            const alreadyExists = categories.some(
-              (category) => category.name.toLowerCase() === name.toLowerCase(),
-            );
-
-            if (alreadyExists) {
-              Alert.alert("Already exists", "This category already exists.");
-              return;
-            }
-
-            const newCategory: Category = {
-              name,
-              icon: "📌",
-            };
-
-            const updatedCategories = [...categories, newCategory];
-
-            try {
-              await AsyncStorage.setItem(
-                "categories",
-                JSON.stringify(updatedCategories),
-              );
-
-              setCategories(updatedCategories);
-              setSelectedCategory(name);
-            } catch (error) {
-              Alert.alert("Error", "Could not save the category.");
-
-              console.log(error);
-            }
-          },
-        },
-      ],
-      "plain-text",
-    );
+  const saveCategory = async () => {
+    const name = newCategoryName.trim();
+    if (!name) {
+      showMessage("Enter a category name.");
+      return;
+    }
+    if (
+      categories.some(
+        (category) => category.name.toLowerCase() === name.toLowerCase(),
+      )
+    ) {
+      showMessage("This category already exists.");
+      return;
+    }
+    const updatedCategories = [...categories, { name, icon: "📌" }];
+    try {
+      await AsyncStorage.setItem(
+        "categories",
+        JSON.stringify(updatedCategories),
+      );
+      setCategories(updatedCategories);
+      setSelectedCategory(name);
+      setCategoryModalVisible(false);
+      setNewCategoryName("");
+      showMessage(`Category "${name}" added successfully!`);
+    } catch (error) {
+      console.log("Error saving category:", error);
+      showMessage("Could not save the category.");
+    }
   };
 
   // =========================
   // DELETE TRANSACTION
+
   // =========================
 
   const deleteTransaction = async (id: number) => {
     const transaction = transactions.find((item) => item.id === id);
-
-    if (!transaction) {
+    if (!transaction) return;
+    const performDelete = async () => {
+      const updatedTransactions = transactions.filter((item) => item.id !== id);
+      const newBalance =
+        transaction.type === "expense"
+          ? balance + transaction.amount
+          : balance - transaction.amount;
+      try {
+        await AsyncStorage.setItem(
+          "transactions",
+          JSON.stringify(updatedTransactions),
+        );
+        await AsyncStorage.setItem("balance", newBalance.toString());
+        setTransactions(updatedTransactions);
+        setBalance(newBalance);
+      } catch (error) {
+        console.log("Error deleting transaction:", error);
+        showMessage("Could not delete this transaction. Please try again.");
+      }
+    };
+    if (Platform.OS === "web") {
+      if (
+        window.confirm(
+          "Delete this transaction? Your balance and analytics will be updated.",
+        )
+      )
+        await performDelete();
       return;
     }
-
     Alert.alert(
       "Delete transaction?",
       "This will also update your balance and analytics.",
       [
-        {
-          text: "Cancel",
-          style: "cancel",
-        },
+        { text: "Cancel", style: "cancel" },
         {
           text: "Delete",
           style: "destructive",
-          onPress: async () => {
-            const updatedTransactions = transactions.filter(
-              (item) => item.id !== id,
-            );
-
-            const newBalance =
-              transaction.type === "expense"
-                ? balance + transaction.amount
-                : balance - transaction.amount;
-
-            try {
-              await AsyncStorage.setItem(
-                "transactions",
-                JSON.stringify(updatedTransactions),
-              );
-
-              await AsyncStorage.setItem("balance", newBalance.toString());
-
-              setTransactions(updatedTransactions);
-              setBalance(newBalance);
-            } catch (error) {
-              console.log(error);
-            }
+          onPress: () => {
+            void performDelete();
           },
         },
       ],
@@ -361,12 +424,14 @@ export default function HomeScreen() {
 
   // =========================
   // START EDITING
+
   // =========================
 
   const startEditing = (transaction: Transaction) => {
     setEditingTransaction(transaction);
 
     setAmount(transaction.amount.toString());
+
     setNote(transaction.note);
 
     if (transaction.category) {
@@ -381,10 +446,29 @@ export default function HomeScreen() {
   };
 
   // =========================
+
+  const dateKey = (date: Date) =>
+    `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+  const historyTransactions = [...transactions]
+    .filter(
+      (transaction) =>
+        !selectedHistoryDate ||
+        dateKey(new Date(transaction.date)) === selectedHistoryDate,
+    )
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  const selectedDayIncome = historyTransactions
+    .filter((t) => t.type === "income")
+    .reduce((sum, t) => sum + t.amount, 0);
+  const selectedDayExpenses = historyTransactions
+    .filter((t) => t.type === "expense")
+    .reduce((sum, t) => sum + t.amount, 0);
+
   // ANALYTICS
+
   // =========================
 
   const currentMonth = new Date().getMonth();
+
   const currentYear = new Date().getFullYear();
 
   const thisMonthExpenses = transactions.filter((transaction) => {
@@ -401,31 +485,42 @@ export default function HomeScreen() {
 
   const totalExpenses = thisMonthExpenses.reduce(
     (total, transaction) => total + transaction.amount,
+
     0,
   );
 
   const totalAllTimeExpenses = transactions
+
     .filter((transaction) => transaction.type === "expense")
+
     .reduce((total, transaction) => total + transaction.amount, 0);
 
   const categoryTotals = categories
+
     .map((category) => {
       const total = thisMonthExpenses
+
         .filter((transaction) => transaction.category === category.name)
+
         .reduce((sum, transaction) => sum + transaction.amount, 0);
 
       return {
         ...category,
+
         total,
       };
     })
+
     .filter((category) => category.total > 0)
+
     .sort((a, b) => b.total - a.total);
 
   const highestCategory = categoryTotals[0];
 
   // =========================
+
   // HOME SCREEN
+
   // =========================
 
   return (
@@ -441,7 +536,9 @@ export default function HomeScreen() {
       <Text style={styles.balance}>₹{balance.toFixed(2)}</Text>
 
       {/* =========================
+
           MAIN BUTTONS
+
       ========================= */}
 
       <View style={styles.buttons}>
@@ -451,8 +548,11 @@ export default function HomeScreen() {
           style={styles.addMoneyButton}
           onPress={() => {
             setEditingTransaction(null);
+
             setAmount("");
+
             setNote("");
+
             setAddMoneyModalVisible(true);
           }}
         >
@@ -465,9 +565,13 @@ export default function HomeScreen() {
           style={styles.expenseButton}
           onPress={() => {
             setEditingTransaction(null);
+
             setAmount("");
+
             setNote("");
+
             setSelectedCategory("Food");
+
             setExpenseModalVisible(true);
           }}
         >
@@ -476,11 +580,24 @@ export default function HomeScreen() {
       </View>
 
       {/* =========================
+
           RECENT TRANSACTIONS
+
       ========================= */}
 
       <View style={styles.transactionSection}>
-        <Text style={styles.sectionTitle}>Recent Transactions</Text>
+        <View style={styles.historyHeader}>
+          <Text style={styles.sectionTitle}>Recent Transactions</Text>
+          <Pressable
+            style={styles.seeAllButton}
+            onPress={() => {
+              setSelectedHistoryDate(null);
+              setHistoryModalVisible(true);
+            }}
+          >
+            <Text style={styles.seeAllText}>See All →</Text>
+          </Pressable>
+        </View>
 
         {transactions.length === 0 ? (
           <View style={styles.emptyTransactions}>
@@ -492,8 +609,11 @@ export default function HomeScreen() {
           </View>
         ) : (
           [...transactions]
+
             .reverse()
+
             .slice(0, 5)
+
             .map((transaction) => {
               const category = categories.find(
                 (item) => item.name === transaction.category,
@@ -546,6 +666,7 @@ export default function HomeScreen() {
                   <Text
                     style={[
                       styles.transactionAmount,
+
                       isIncome ? styles.incomeAmount : styles.expenseAmount,
                     ]}
                   >
@@ -558,7 +679,9 @@ export default function HomeScreen() {
       </View>
 
       {/* =========================
+
           ANALYTICS
+
       ========================= */}
 
       <View style={styles.analyticsSection}>
@@ -636,6 +759,7 @@ export default function HomeScreen() {
                     <View
                       style={[
                         styles.progressBar,
+
                         {
                           width: `${percentage}%`,
                         },
@@ -650,7 +774,9 @@ export default function HomeScreen() {
       </View>
 
       {/* =========================
+
           ADD / EDIT MONEY MODAL
+
       ========================= */}
 
       <Modal
@@ -659,6 +785,7 @@ export default function HomeScreen() {
         animationType="slide"
         onRequestClose={() => {
           setEditingTransaction(null);
+
           setAddMoneyModalVisible(false);
         }}
       >
@@ -695,8 +822,11 @@ export default function HomeScreen() {
                 style={styles.cancelButton}
                 onPress={() => {
                   setAmount("");
+
                   setNote("");
+
                   setEditingTransaction(null);
+
                   setAddMoneyModalVisible(false);
                 }}
               >
@@ -714,7 +844,9 @@ export default function HomeScreen() {
       </Modal>
 
       {/* =========================
+
           ADD / EDIT EXPENSE MODAL
+
       ========================= */}
 
       <Modal
@@ -723,6 +855,7 @@ export default function HomeScreen() {
         animationType="slide"
         onRequestClose={() => {
           setEditingTransaction(null);
+
           setExpenseModalVisible(false);
         }}
       >
@@ -757,6 +890,7 @@ export default function HomeScreen() {
                     key={category.name}
                     style={[
                       styles.categoryButton,
+
                       selectedCategory === category.name &&
                         styles.selectedCategory,
                     ]}
@@ -791,9 +925,13 @@ export default function HomeScreen() {
                   style={styles.cancelButton}
                   onPress={() => {
                     setAmount("");
+
                     setNote("");
+
                     setSelectedCategory("Food");
+
                     setEditingTransaction(null);
+
                     setExpenseModalVisible(false);
                   }}
                 >
@@ -810,49 +948,258 @@ export default function HomeScreen() {
           </View>
         </KeyboardAvoidingView>
       </Modal>
+
+      <Modal
+        visible={categoryModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setCategoryModalVisible(false)}
+      >
+        <View style={styles.modalBackground}>
+          <View style={styles.modal}>
+            <Text style={styles.modalTitle}>Add Category</Text>
+            <Text style={styles.inputLabel}>Category name</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="e.g. Gifts"
+              value={newCategoryName}
+              onChangeText={setNewCategoryName}
+              autoFocus
+              returnKeyType="done"
+              onSubmitEditing={() => {
+                void saveCategory();
+              }}
+            />
+            <View style={styles.modalButtons}>
+              <Pressable
+                style={styles.cancelButton}
+                onPress={() => setCategoryModalVisible(false)}
+              >
+                <Text>Cancel</Text>
+              </Pressable>
+              <Pressable
+                style={styles.saveButton}
+                onPress={() => {
+                  void saveCategory();
+                }}
+              >
+                <Text style={styles.saveText}>Add Category</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
+        visible={historyModalVisible}
+        animationType="slide"
+        onRequestClose={() => setHistoryModalVisible(false)}
+      >
+        <View style={styles.historyScreen}>
+          <View style={styles.historyTopBar}>
+            <Text style={styles.historyTitle}>Transaction History</Text>
+            <Pressable
+              style={styles.closeButton}
+              onPress={() => setHistoryModalVisible(false)}
+            >
+              <Text style={styles.closeButtonText}>Done</Text>
+            </Pressable>
+          </View>
+          <Text style={styles.historyHelp}>
+            Choose a date to see that day's transactions, or view all dates.
+          </Text>
+          <View style={styles.dateFilterRow}>
+            {Platform.OS === "web" ? (
+              <input
+                type="date"
+                value={selectedHistoryDate ?? ""}
+                onChange={(event) =>
+                  setSelectedHistoryDate(event.target.value || null)
+                }
+                style={{
+                  flex: 1,
+                  minWidth: 0,
+                  height: 56,
+                  padding: 14,
+                  borderRadius: 14,
+                  border: "1px solid #E7E8ED",
+                  backgroundColor: "#FFFFFF",
+                  fontSize: 16,
+                  color: "#15171C",
+                }}
+              />
+            ) : (
+              <TextInput
+                style={[styles.input, styles.dateInput]}
+                placeholder="YYYY-MM-DD"
+                value={selectedHistoryDate ?? ""}
+                onChangeText={(value) => setSelectedHistoryDate(value || null)}
+              />
+            )}
+
+            <Pressable
+              style={styles.clearDateButton}
+              onPress={() => setSelectedHistoryDate(null)}
+            >
+              <Text style={styles.clearDateText}>All dates</Text>
+            </Pressable>
+          </View>
+          {selectedHistoryDate && (
+            <View style={styles.dailySummary}>
+              <Text style={styles.dailySummaryTitle}>
+                {new Date(`${selectedHistoryDate}T12:00:00`).toLocaleDateString(
+                  undefined,
+                  { day: "numeric", month: "long", year: "numeric" },
+                )}
+              </Text>
+              <View style={styles.dailySummaryRow}>
+                <Text style={styles.dailyIncome}>
+                  Income +₹{selectedDayIncome.toFixed(2)}
+                </Text>
+                <Text style={styles.dailyExpense}>
+                  Expenses −₹{selectedDayExpenses.toFixed(2)}
+                </Text>
+              </View>
+            </View>
+          )}
+          <ScrollView
+            contentContainerStyle={styles.historyList}
+            keyboardShouldPersistTaps="handled"
+          >
+            {historyTransactions.length === 0 ? (
+              <View style={styles.emptyTransactions}>
+                <Text style={styles.emptyText}>No transactions found</Text>
+                <Text style={styles.emptySubtext}>
+                  {selectedHistoryDate
+                    ? "There are no transactions saved for this date."
+                    : "Your saved transactions will appear here."}
+                </Text>
+              </View>
+            ) : (
+              historyTransactions.map((transaction) => {
+                const category = categories.find(
+                  (item) => item.name === transaction.category,
+                );
+                const isIncome = transaction.type === "income";
+                return (
+                  <View
+                    key={transaction.id}
+                    style={styles.historyTransactionCard}
+                  >
+                    <View style={styles.transactionLeft}>
+                      <View style={styles.transactionIcon}>
+                        <Text style={styles.transactionEmoji}>
+                          {isIncome ? "💰" : category?.icon || "📦"}
+                        </Text>
+                      </View>
+                      <View style={styles.transactionInfo}>
+                        <Text style={styles.transactionTitle}>
+                          {isIncome
+                            ? transaction.note || "Money received"
+                            : transaction.category || "Expense"}
+                        </Text>
+                        <Text style={styles.transactionNote}>
+                          {new Date(transaction.date).toLocaleString()}
+                        </Text>
+                        {!!transaction.note && !isIncome && (
+                          <Text style={styles.transactionNote}>
+                            Note: {transaction.note}
+                          </Text>
+                        )}
+                      </View>
+                    </View>
+                    <View style={styles.historyRight}>
+                      <Text
+                        style={[
+                          styles.transactionAmount,
+                          isIncome ? styles.incomeAmount : styles.expenseAmount,
+                        ]}
+                      >
+                        {isIncome ? "+" : "−"}₹{transaction.amount.toFixed(2)}
+                      </Text>
+                      <View style={styles.transactionActions}>
+                        <Pressable
+                          onPress={() => {
+                            setHistoryModalVisible(false);
+                            startEditing(transaction);
+                          }}
+                        >
+                          <Text style={styles.actionIcon}>✏️</Text>
+                        </Pressable>
+                        <Pressable
+                          onPress={() => {
+                            void deleteTransaction(transaction.id);
+                          }}
+                        >
+                          <Text style={styles.actionIcon}>🗑️</Text>
+                        </Pressable>
+                      </View>
+                    </View>
+                  </View>
+                );
+              })
+            )}
+          </ScrollView>
+        </View>
+      </Modal>
     </ScrollView>
   );
 }
 
 // =========================
+
 // STYLES
+
 // =========================
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+
     backgroundColor: "#F6F7FB",
   },
 
   containerContent: {
     padding: 24,
+
     paddingTop: 100,
+
     paddingBottom: 50,
   },
 
   analyticsSubtitleWhite: {
     color: "#AEB2BC",
+
     fontSize: 13,
+
     marginTop: 6,
   },
 
   title: {
     fontSize: 30,
+
     fontWeight: "700",
+
     color: "#15171C",
+
     marginBottom: 50,
   },
 
   label: {
     fontSize: 15,
+
     color: "#737782",
+
     marginBottom: 8,
   },
 
   balance: {
     fontSize: 42,
+
     fontWeight: "700",
+
     color: "#15171C",
+
     marginBottom: 40,
   },
 
@@ -862,34 +1209,48 @@ const styles = StyleSheet.create({
 
   addMoneyButton: {
     backgroundColor: "#111827",
+
     padding: 18,
+
     borderRadius: 18,
+
     alignItems: "center",
   },
 
   addMoneyText: {
     color: "#FFFFFF",
+
     fontSize: 17,
+
     fontWeight: "600",
   },
 
   expenseButton: {
     backgroundColor: "#FFFFFF",
+
     padding: 18,
+
     borderRadius: 18,
+
     alignItems: "center",
+
     borderWidth: 1,
+
     borderColor: "#E7E8ED",
   },
 
   expenseText: {
     color: "#15171C",
+
     fontSize: 17,
+
     fontWeight: "600",
   },
 
   // =========================
+
   // TRANSACTIONS
+
   // =========================
 
   transactionSection: {
@@ -898,57 +1259,85 @@ const styles = StyleSheet.create({
 
   sectionTitle: {
     fontSize: 20,
+
     fontWeight: "700",
+
     color: "#15171C",
+
     marginBottom: 14,
   },
 
   emptyTransactions: {
     backgroundColor: "#FFFFFF",
+
     padding: 25,
+
     borderRadius: 18,
+
     alignItems: "center",
+
     borderWidth: 1,
+
     borderColor: "#E7E8ED",
   },
 
   emptyText: {
     fontSize: 16,
+
     fontWeight: "600",
+
     color: "#15171C",
   },
 
   emptySubtext: {
     fontSize: 13,
+
     color: "#737782",
+
     marginTop: 5,
+
     textAlign: "center",
   },
 
   transactionCard: {
     backgroundColor: "#FFFFFF",
+
     borderRadius: 18,
+
     padding: 14,
+
     marginBottom: 10,
+
     flexDirection: "row",
+
     alignItems: "center",
+
     borderWidth: 1,
+
     borderColor: "#E7E8ED",
   },
 
   transactionLeft: {
     flexDirection: "row",
+
     alignItems: "center",
+
     flex: 1,
   },
 
   transactionIcon: {
     width: 45,
+
     height: 45,
+
     borderRadius: 14,
+
     backgroundColor: "#F1F2F5",
+
     alignItems: "center",
+
     justifyContent: "center",
+
     marginRight: 12,
   },
 
@@ -962,31 +1351,41 @@ const styles = StyleSheet.create({
 
   transactionTitle: {
     fontSize: 15,
+
     fontWeight: "600",
+
     color: "#15171C",
   },
 
   transactionNote: {
     fontSize: 12,
+
     color: "#737782",
+
     marginTop: 3,
   },
 
   transactionAmount: {
     fontSize: 15,
+
     fontWeight: "700",
+
     marginLeft: 8,
   },
 
   transactionActions: {
     flexDirection: "row",
+
     alignItems: "center",
+
     marginLeft: 8,
+
     gap: 4,
   },
 
   actionIcon: {
     fontSize: 16,
+
     padding: 4,
   },
 
@@ -999,7 +1398,9 @@ const styles = StyleSheet.create({
   },
 
   // =========================
+
   // ANALYTICS
+
   // =========================
 
   analyticsSection: {
@@ -1008,47 +1409,65 @@ const styles = StyleSheet.create({
 
   analyticsHeader: {
     flexDirection: "row",
+
     justifyContent: "space-between",
+
     alignItems: "center",
   },
 
   analyticsSubtitle: {
     fontSize: 13,
+
     color: "#737782",
+
     marginTop: 2,
   },
 
   totalExpenseCard: {
     backgroundColor: "#111827",
+
     borderRadius: 22,
+
     padding: 20,
+
     marginTop: 14,
+
     marginBottom: 12,
   },
 
   totalExpenseLabel: {
     color: "#AEB2BC",
+
     fontSize: 14,
   },
 
   totalExpenseAmount: {
     color: "#FFFFFF",
+
     fontSize: 30,
+
     fontWeight: "700",
+
     marginTop: 5,
   },
 
   highestCategoryText: {
     color: "#D6D8DE",
+
     fontSize: 13,
+
     marginTop: 8,
   },
 
   categoryReport: {
     backgroundColor: "#FFFFFF",
+
     borderRadius: 20,
+
     padding: 16,
+
     borderWidth: 1,
+
     borderColor: "#E7E8ED",
   },
 
@@ -1058,25 +1477,33 @@ const styles = StyleSheet.create({
 
   reportTop: {
     flexDirection: "row",
+
     alignItems: "center",
+
     justifyContent: "space-between",
+
     marginBottom: 8,
   },
 
   reportCategory: {
     flexDirection: "row",
+
     alignItems: "center",
+
     flex: 1,
   },
 
   reportIcon: {
     fontSize: 20,
+
     marginRight: 9,
   },
 
   reportName: {
     fontSize: 14,
+
     fontWeight: "600",
+
     color: "#15171C",
   },
 
@@ -1086,140 +1513,278 @@ const styles = StyleSheet.create({
 
   reportAmount: {
     fontSize: 14,
+
     fontWeight: "700",
+
     color: "#15171C",
   },
 
   reportPercentage: {
     fontSize: 11,
+
     color: "#737782",
+
     marginTop: 2,
   },
 
   progressBackground: {
     height: 8,
+
     backgroundColor: "#ECEEF2",
+
     borderRadius: 10,
+
     overflow: "hidden",
   },
 
   progressBar: {
     height: 8,
+
     backgroundColor: "#111827",
+
     borderRadius: 10,
   },
 
   emptyAnalytics: {
     backgroundColor: "#FFFFFF",
+
     borderRadius: 20,
+
     padding: 25,
+
     alignItems: "center",
+
     borderWidth: 1,
+
     borderColor: "#E7E8ED",
   },
 
   emptyAnalyticsIcon: {
     fontSize: 30,
+
     marginBottom: 8,
   },
 
   // =========================
+
   // MODALS
+
   // =========================
 
   modalBackground: {
     flex: 1,
+
     backgroundColor: "rgba(0,0,0,0.45)",
+
     justifyContent: "center",
+
     padding: 20,
   },
 
   modal: {
     backgroundColor: "#FFFFFF",
+
     padding: 24,
+
     borderRadius: 28,
+
     maxHeight: "90%",
   },
 
   modalTitle: {
     fontSize: 24,
+
     fontWeight: "700",
+
     marginBottom: 20,
   },
 
   inputLabel: {
     fontSize: 14,
+
     color: "#737782",
+
     marginBottom: 8,
+
     marginTop: 10,
   },
 
   input: {
     borderWidth: 1,
+
     borderColor: "#E7E8ED",
+
     borderRadius: 14,
+
     padding: 15,
+
     fontSize: 17,
+
     backgroundColor: "#FFFFFF",
   },
 
   categoryGrid: {
     flexDirection: "row",
+
     flexWrap: "wrap",
+
     gap: 8,
   },
 
   categoryButton: {
     width: "30%",
+
     minHeight: 70,
+
     borderWidth: 1,
+
     borderColor: "#E7E8ED",
+
     borderRadius: 14,
+
     alignItems: "center",
+
     justifyContent: "center",
+
     padding: 6,
   },
 
   selectedCategory: {
     borderWidth: 2,
+
     borderColor: "#111827",
+
     backgroundColor: "#F1F2F5",
   },
 
   categoryIcon: {
     fontSize: 23,
+
     marginBottom: 3,
   },
 
   categoryName: {
     fontSize: 11,
+
     textAlign: "center",
   },
 
   modalButtons: {
     flexDirection: "row",
+
     gap: 10,
+
     marginTop: 20,
   },
 
   cancelButton: {
     flex: 1,
+
     padding: 16,
+
     borderRadius: 14,
+
     alignItems: "center",
+
     backgroundColor: "#F1F2F5",
   },
 
   saveButton: {
     flex: 1,
+
     padding: 16,
+
     borderRadius: 14,
+
     alignItems: "center",
+
     backgroundColor: "#111827",
   },
 
   saveText: {
     color: "#FFFFFF",
+
     fontWeight: "600",
   },
+
+  historyHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  seeAllButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    backgroundColor: "#E8EEFF",
+    marginBottom: 14,
+  },
+  seeAllText: { color: "#2859C5", fontWeight: "700", fontSize: 14 },
+  historyScreen: {
+    flex: 1,
+    backgroundColor: "#F6F7FB",
+    paddingTop: 54,
+    paddingHorizontal: 18,
+  },
+  historyTopBar: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 10,
+  },
+  historyTitle: { fontSize: 24, fontWeight: "700", color: "#15171C", flex: 1 },
+  closeButton: {
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 12,
+    backgroundColor: "#111827",
+  },
+  closeButtonText: { color: "#FFFFFF", fontWeight: "600" },
+  historyHelp: { fontSize: 13, color: "#737782", marginBottom: 14 },
+  dateFilterRow: {
+    flexDirection: "row",
+    gap: 8,
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  dateInput: { flex: 1, minWidth: 0 },
+  clearDateButton: {
+    backgroundColor: "#E8EEFF",
+    padding: 14,
+    borderRadius: 14,
+  },
+  clearDateText: { color: "#2859C5", fontWeight: "700" },
+  dailySummary: {
+    backgroundColor: "#111827",
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 12,
+  },
+  dailySummaryTitle: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "700",
+    marginBottom: 10,
+  },
+  dailySummaryRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  dailyIncome: { color: "#8DE0B6", fontWeight: "600" },
+  dailyExpense: { color: "#FFAAAA", fontWeight: "600" },
+  historyList: { paddingBottom: 35 },
+  historyTransactionCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    padding: 12,
+    marginBottom: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#E7E8ED",
+    gap: 8,
+  },
+  historyRight: { alignItems: "flex-end", justifyContent: "center" },
 });
